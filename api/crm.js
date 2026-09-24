@@ -1,4 +1,27 @@
 const { createClient } = require('redis');
+const crypto = require('crypto');
+
+function makeSessionToken(secret) {
+  return crypto
+    .createHmac('sha256', secret)
+    .update('loviberi-crm-session')
+    .digest('hex');
+}
+
+function getCookie(req, name) {
+  const cookies = req.headers.cookie || '';
+
+  const match = cookies
+    .split(';')
+    .map(cookie => cookie.trim())
+    .find(cookie => cookie.startsWith(name + '='));
+
+  if (!match) return null;
+
+  return decodeURIComponent(
+    match.substring(name.length + 1)
+  );
+}
 
 let client;
 
@@ -12,6 +35,25 @@ async function getRedis() {
 }
 
 module.exports = async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+
+  const secret = process.env.CRM_PASSWORD;
+
+  if (!secret) {
+    return res.status(500).json({
+      error: 'CRM_PASSWORD not configured'
+    });
+  }
+
+  const session = getCookie(req, 'crm_session');
+  const expectedSession = makeSessionToken(secret);
+
+  if (!session || session !== expectedSession) {
+    return res.status(401).json({
+      error: 'Unauthorized'
+    });
+  }
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
