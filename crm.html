@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ЛОВИ БЕРИ — CRM</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f8f1e9;
+      color: #222;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      margin: 0;
+      color: #991b3a;
+      font-size: 36px;
+    }
+
+    .subtitle {
+      color: #777;
+      margin-top: 8px;
+      margin-bottom: 30px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+
+    .stat {
+      background: white;
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 8px 25px rgba(0,0,0,.06);
+    }
+
+    .stat-title {
+      color: #777;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    .stat-number {
+      font-size: 34px;
+      font-weight: bold;
+      color: #991b3a;
+    }
+
+    .panel {
+      background: white;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 8px 25px rgba(0,0,0,.06);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .panel-header h2 {
+      margin: 0;
+    }
+
+    button {
+      border: 0;
+      background: #991b3a;
+      color: white;
+      font-weight: bold;
+      padding: 12px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 800px;
+    }
+
+    th {
+      text-align: left;
+      padding: 14px 12px;
+      border-bottom: 2px solid #eee;
+      color: #777;
+      font-size: 13px;
+    }
+
+    td {
+      padding: 16px 12px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 7px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .arrived {
+      background: #e5f5e9;
+      color: #28733c;
+    }
+
+    .waiting {
+      background: #fff2d9;
+      color: #8a6116;
+    }
+
+    .empty {
+      padding: 30px;
+      text-align: center;
+      color: #777;
+    }
+
+    .error {
+      background: #fdecec;
+      color: #a12626;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    @media (max-width: 800px) {
+      .stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      h1 {
+        font-size: 28px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1>ЛОВИ БЕРИ</h1>
+  <div class="subtitle">CRM мероприятия</div>
+
+  <div class="stats">
+
+    <div class="stat">
+      <div class="stat-title">ЗАРЕГИСТРИРОВАНО</div>
+      <div class="stat-number" id="total">—</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-title">ПРИШЛИ</div>
+      <div class="stat-number" id="arrived">—</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-title">НЕ ПРИШЛИ</div>
+      <div class="stat-number" id="waiting">—</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-title">КОНВЕРСИЯ В ВИЗИТ</div>
+      <div class="stat-number" id="conversion">—</div>
+    </div>
+
+  </div>
+
+  <div id="error" class="error"></div>
+
+  <div class="panel">
+
+    <div class="panel-header">
+      <h2>Гости</h2>
+      <button onclick="loadCRM()">Обновить данные</button>
+    </div>
+
+    <div class="table-wrap">
+
+      <table>
+
+        <thead>
+          <tr>
+            <th>Имя</th>
+            <th>Код</th>
+            <th>Статус</th>
+            <th>Регистрация</th>
+            <th>Вход</th>
+          </tr>
+        </thead>
+
+        <tbody id="guestTable"></tbody>
+
+      </table>
+
+      <div id="empty" class="empty" style="display:none">
+        Пока нет зарегистрированных гостей.
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+function formatDate(value) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+
+  if (isNaN(date.getTime())) return "—";
+
+  return date.toLocaleString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+async function loadCRM() {
+
+  const errorBox = document.getElementById("error");
+  errorBox.style.display = "none";
+
+  try {
+
+    const response = await fetch("/api/crm", {
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      throw new Error("Ошибка загрузки CRM");
+    }
+
+    const data = await response.json();
+
+    document.getElementById("total").textContent =
+      data.stats?.total ?? 0;
+
+    document.getElementById("arrived").textContent =
+      data.stats?.arrived ?? 0;
+
+    document.getElementById("waiting").textContent =
+      data.stats?.waiting ?? 0;
+
+    document.getElementById("conversion").textContent =
+      (data.stats?.conversion ?? 0) + "%";
+
+    const table = document.getElementById("guestTable");
+    const empty = document.getElementById("empty");
+
+    table.innerHTML = "";
+
+    const guests = Array.isArray(data.guests) ? data.guests : [];
+
+    if (!guests.length) {
+      empty.style.display = "block";
+      return;
+    }
+
+    empty.style.display = "none";
+
+    guests.forEach(guest => {
+
+      const arrived = guest.status === "used";
+
+      const row = document.createElement("tr");
+
+      row.innerHTML = `
+        <td><strong>${escapeHtml(guest.name || "Гость")}</strong></td>
+
+        <td>${escapeHtml(guest.code || "—")}</td>
+
+        <td>
+          <span class="status ${arrived ? "arrived" : "waiting"}">
+            ${arrived ? "Пришёл" : "Ожидается"}
+          </span>
+        </td>
+
+        <td>${formatDate(guest.createdAt)}</td>
+
+        <td>${formatDate(guest.usedAt)}</td>
+      `;
+
+      table.appendChild(row);
+
+    });
+
+  } catch (error) {
+
+    const errorBox = document.getElementById("error");
+
+    errorBox.textContent =
+      "Не удалось загрузить данные CRM.";
+
+    errorBox.style.display = "block";
+
+  }
+}
+
+loadCRM();
+
+setInterval(loadCRM, 30000);
+
+</script>
+
+</body>
+</html>
