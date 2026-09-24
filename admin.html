@@ -1,60 +1,104 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ЛОВИ БЕРИ — вход</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ЛОВИ БЕРИ — вход</title>
 
-<style>
-body{
-  font-family:Arial,sans-serif;
-  background:#f8f1e9;
-  margin:0;
-}
-.box{
-  max-width:480px;
-  margin:40px auto;
-  padding:24px;
-}
-.card{
-  background:#fff;
-  border-radius:22px;
-  padding:24px;
-  box-shadow:0 8px 30px #0001;
-}
-h1{
-  text-align:center;
-  color:#7b2034;
-}
-input{
-  width:100%;
-  padding:16px;
-  border:1px solid #ddd;
-  border-radius:12px;
-  font-size:20px;
-  box-sizing:border-box;
-}
-.btn{
-  width:100%;
-  margin-top:14px;
-  padding:16px;
-  border:0;
-  border-radius:12px;
-  background:#7b2034;
-  color:#fff;
-  font-weight:700;
-  font-size:17px;
-  cursor:pointer;
-}
-.result{
-  margin-top:18px;
-  padding:16px;
-  border-radius:12px;
-  text-align:center;
-  font-size:17px;
-  display:none;
-}
-</style>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f8f1e9;
+      margin: 0;
+      color: #171717;
+    }
+
+    .box {
+      max-width: 480px;
+      margin: 40px auto;
+      padding: 24px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 22px;
+      padding: 26px;
+      box-shadow: 0 8px 30px #0001;
+    }
+
+    h1 {
+      text-align: center;
+      color: #8f1d36;
+      margin: 0 0 24px;
+    }
+
+    .label {
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 16px;
+      font-size: 21px;
+      border: 1px solid #ddd;
+      border-radius: 14px;
+      margin-bottom: 14px;
+    }
+
+    button {
+      width: 100%;
+      padding: 16px;
+      border: 0;
+      border-radius: 14px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    #scanBtn {
+      background: #8f1d36;
+      color: white;
+      margin-bottom: 12px;
+    }
+
+    #checkBtn {
+      background: #8f1d36;
+      color: white;
+    }
+
+    #reader {
+      display: none;
+      margin: 18px 0;
+      overflow: hidden;
+      border-radius: 16px;
+    }
+
+    #result {
+      display: none;
+      margin-top: 20px;
+      padding: 18px;
+      border-radius: 14px;
+      text-align: center;
+      font-size: 18px;
+    }
+
+    .divider {
+      text-align: center;
+      color: #777;
+      margin: 16px 0;
+    }
+
+    .hint {
+      text-align: center;
+      color: #777;
+      font-size: 14px;
+      margin-top: 12px;
+    }
+  </style>
 </head>
 
 <body>
@@ -64,49 +108,66 @@ input{
 
     <h1>ЛОВИ БЕРИ</h1>
 
-    <p>Проверка билета на входе</p>
+    <button id="scanBtn">
+      📷 СКАНИРОВАТЬ QR-КОД
+    </button>
+
+    <div id="reader"></div>
+
+    <div class="divider">
+      или введите код вручную
+    </div>
+
+    <div class="label">
+      Проверка билета на входе
+    </div>
 
     <input
       id="code"
+      type="text"
       placeholder="LOVI-1234"
       autocomplete="off"
     >
 
-    <button
-      id="verifyButton"
-      class="btn"
-      type="button">
+    <button id="checkBtn">
       ПРОВЕРИТЬ БИЛЕТ
     </button>
 
-    <div id="result" class="result"></div>
+    <div id="result"></div>
+
+    <div class="hint">
+      Один билет можно использовать только один раз.
+    </div>
 
   </div>
 </div>
 
 <script>
-const button = document.getElementById('verifyButton');
 
-button.addEventListener('click', async function () {
+const codeInput = document.getElementById('code');
+const checkBtn = document.getElementById('checkBtn');
+const scanBtn = document.getElementById('scanBtn');
+const result = document.getElementById('result');
+const reader = document.getElementById('reader');
 
-  const code = document
-    .getElementById('code')
-    .value
-    .trim()
-    .toUpperCase();
+let scanner = null;
+let scanning = false;
 
-  const result = document.getElementById('result');
 
-  result.style.display = 'block';
+async function verifyTicket(code) {
+
+  code = String(code || '').trim();
 
   if (!code) {
-    result.textContent = 'Введите код билета';
-    result.style.background = '#fdecec';
+    showResult(
+      'Введите код билета.',
+      false
+    );
     return;
   }
 
-  result.textContent = 'Проверяем...';
-  result.style.background = '#f3f3f3';
+  checkBtn.disabled = true;
+  scanBtn.disabled = true;
 
   try {
 
@@ -115,30 +176,184 @@ button.addEventListener('click', async function () {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ code: code })
+      body: JSON.stringify({
+        code: code
+      })
     });
 
     const data = await response.json();
 
-    result.textContent =
-      data.message || data.error || 'Готово';
-
     if (response.ok) {
-      result.style.background = '#e8f5e9';
+
+      showResult(
+        data.message || 'Билет принят. Гость может пройти.',
+        true
+      );
+
     } else {
-      result.style.background = '#fdecec';
+
+      showResult(
+        data.error || data.message || 'Билет не принят.',
+        false
+      );
+
     }
 
   } catch (error) {
 
-    result.textContent =
-      'Не удалось связаться с сервером';
+    showResult(
+      'Не удалось связаться с сервером.',
+      false
+    );
 
+  } finally {
+
+    checkBtn.disabled = false;
+    scanBtn.disabled = false;
+
+  }
+}
+
+
+function showResult(message, success) {
+
+  result.style.display = 'block';
+  result.textContent = message;
+
+  if (success) {
+    result.style.background = '#e8f5e9';
+    result.style.color = '#155724';
+  } else {
     result.style.background = '#fdecec';
+    result.style.color = '#8f1d36';
+  }
+
+}
+
+
+function extractCode(decodedText) {
+
+  let value = decodedText;
+
+  try {
+
+    const parsed = JSON.parse(decodedText);
+
+    if (parsed.code) {
+      value = parsed.code;
+    }
+
+  } catch (e) {}
+
+  const match = String(value).match(/LOVI-\d+/i);
+
+  if (match) {
+    return match[0].toUpperCase();
+  }
+
+  return String(value).trim();
+
+}
+
+
+async function stopScanner() {
+
+  if (!scanner || !scanning) return;
+
+  try {
+    await scanner.stop();
+  } catch (e) {}
+
+  try {
+    scanner.clear();
+  } catch (e) {}
+
+  scanning = false;
+  reader.style.display = 'none';
+  scanBtn.textContent = '📷 СКАНИРОВАТЬ QR-КОД';
+
+}
+
+
+async function startScanner() {
+
+  result.style.display = 'none';
+
+  if (scanning) {
+    await stopScanner();
+    return;
+  }
+
+  reader.style.display = 'block';
+
+  scanner = new Html5Qrcode('reader');
+
+  try {
+
+    await scanner.start(
+      {
+        facingMode: 'environment'
+      },
+      {
+        fps: 10,
+        qrbox: {
+          width: 250,
+          height: 250
+        }
+      },
+
+      async function(decodedText) {
+
+        const code = extractCode(decodedText);
+
+        codeInput.value = code;
+
+        await stopScanner();
+
+        await verifyTicket(code);
+
+      },
+
+      function() {
+      }
+    );
+
+    scanning = true;
+
+    scanBtn.textContent = '✕ ЗАКРЫТЬ КАМЕРУ';
+
+  } catch (error) {
+
+    reader.style.display = 'none';
+
+    showResult(
+      'Не удалось открыть камеру. Разрешите доступ к камере в браузере.',
+      false
+    );
 
   }
 
+}
+
+
+scanBtn.addEventListener('click', startScanner);
+
+
+checkBtn.addEventListener('click', function() {
+
+  verifyTicket(codeInput.value);
+
 });
+
+
+codeInput.addEventListener('keydown', function(event) {
+
+  if (event.key === 'Enter') {
+    verifyTicket(codeInput.value);
+  }
+
+});
+
 </script>
 
 </body>
