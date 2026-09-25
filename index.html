@@ -113,7 +113,15 @@ async function init(){
   document.getElementById('status').textContent='Сохраните этот экран и покажите код или QR-код на входе.';
   new QRious({element:document.getElementById('qr'),value:JSON.stringify({app:APP_ID,code}),size:440,level:'H'});
 }
-document.getElementById('save').onclick=()=>window.print();
+document.getElementById('save').onclick=()=>{
+  const isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if(isMobile){
+    window.open(window.location.href,'_blank');
+  }else{
+    window.print();
+  }
+};
 init().catch(e=>document.getElementById('status').textContent='Не удалось подготовить билет. Откройте приложение ещё раз.');
 </script>
 </body>
