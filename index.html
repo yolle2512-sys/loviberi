@@ -117,12 +117,29 @@ document.getElementById('save').onclick=()=>{
   const canvas=document.getElementById('qr');
   const image=canvas.toDataURL('image/png');
 
-  const link=document.createElement('a');
-  link.href=image;
-  link.download='LOVI-BERI-QR.png';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  const isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if(isMobile){
+    const win=window.open();
+    if(win){
+      win.document.write(
+        '<html><head><meta name="viewport" content="width=device-width,initial-scale=1">' +
+        '<title>QR-код ЛОВИ БЕРИ</title></head>' +
+        '<body style="margin:0;background:white;display:flex;align-items:center;justify-content:center;min-height:100vh;">' +
+        '<img src="'+image+'" style="width:90%;max-width:440px;height:auto;">' +
+        '</body></html>'
+      );
+      win.document.close();
+    }
+  }else{
+    const link=document.createElement('a');
+    link.href=image;
+    link.download='LOVI-BERI-QR.png';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+};
 };
 init().catch(e=>document.getElementById('status').textContent='Не удалось подготовить билет. Откройте приложение ещё раз.');
 </script>
